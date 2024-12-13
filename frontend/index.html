@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            max-width: 600px;
+            margin: auto;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 1.2rem;
+        }
+
+        .chat-body {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .chat-message {
+            margin-bottom: 10px;
+        }
+
+        .user-message {
+            text-align: right;
+        }
+
+        .bot-message {
+            text-align: left;
+        }
+
+        .message {
+            display: inline-block;
+            padding: 10px 15px;
+            border-radius: 20px;
+            max-width: 80%;
+        }
+
+        .user-message .message {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .bot-message .message {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+
+        .chat-footer {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .chat-footer input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            outline: none;
+        }
+
+        .chat-footer button {
+            padding: 10px 15px;
+            margin-left: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .chat-footer button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            Chatbot
+        </div>
+        <div class="chat-body" id="chatBody">
+            <!-- Messages will appear here -->
+        </div>
+        <div class="chat-footer">
+            <input type="text" id="userInput" placeholder="Type a message..." required>
+            <button type="submit" id="sendBtn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("sendBtn").addEventListener("click", sendMessage);
+        document.getElementById("userInput").addEventListener("keypress", function (e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        async function sendMessage() {
+            const userInput = document.getElementById("userInput").value;
+            if (!userInput) return;
+
+            // Display user's message
+            displayMessage(userInput, 'user');
+
+            // Call backend API
+            try {
+                const response = await fetch("http://localhost:3000/api/query", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question: userInput })
+                });
+
+                if (!response.ok) throw new Error("Error fetching response");
+
+                const data = await response.json();
+                formatAndDisplayResponse(data.answer, 'bot');
+            } catch (error) {
+                displayMessage("Error: " + error.message, 'bot');
+            }
+
+            document.getElementById("userInput").value = "";
+        }
+
+        function displayMessage(message, sender) {
+            const messageContainer = document.createElement("div");
+            messageContainer.classList.add("chat-message", sender === 'user' ? 'user-message' : 'bot-message');
+
+            const messageBubble = document.createElement("div");
+            messageBubble.classList.add("message");
+            messageBubble.textContent = message;
+
+            messageContainer.appendChild(messageBubble);
+            document.getElementById("chatBody").appendChild(messageContainer);
+
+            // Scroll to bottom
+            document.getElementById("chatBody").scrollTop = document.getElementById("chatBody").scrollHeight;
+        }
+
+        function formatAndDisplayResponse(message, sender) {
+    const messageContainer = document.createElement("div");
+    messageContainer.classList.add("chat-message", sender === 'user' ? 'user-message' : 'bot-message');
+
+    const messageBubble = document.createElement("div");
+    messageBubble.classList.add("message");
+
+    // Check if the message contains numbered lists or bullet points
+    if (message.match(/^\d+\./gm)) {
+        const formattedMessage = formatAsList(message);
+        messageBubble.innerHTML = formattedMessage;
+    } else {
+        messageBubble.textContent = message;
+    }
+
+    messageContainer.appendChild(messageBubble);
+    document.getElementById("chatBody").appendChild(messageContainer);
+
+    // Scroll to bottom
+    document.getElementById("chatBody").scrollTop = document.getElementById("chatBody").scrollHeight;
+}
+
+function formatAsList(message) {
+    const lines = message.split('\n');
+    let listItems = '';
+    let isOrderedList = false;
+
+    lines.forEach(line => {
+        // Remove "**" from each line
+        line = line.replace(/\*\*/g, '');
+
+        if (line.match(/^\d+\./)) {  // Detect numbered lists
+            isOrderedList = true;
+            listItems += `${line.trim()}<br>`;
+        } else if (line.startsWith('*')) {  // Detect bullet points
+            listItems += `<li>${line.slice(1).trim()}<li>`;
+        }
+    });
+
+    if (isOrderedList) {
+        return `${listItems}`;  // Return ordered list
+    } else {
+        return `<ul>${listItems}</ul>`;  // Return unordered list
+    }
+}
+
+    </script>
+</body>
+</html>
