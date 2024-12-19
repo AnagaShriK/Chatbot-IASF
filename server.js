@@ -46,6 +46,7 @@ app.post('/api/query', async (req, res) => {
     }
 });
 
+const PORT = process.env.PORT || 10000;
 // Start the server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
